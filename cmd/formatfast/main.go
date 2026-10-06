@@ -1,7 +1,7 @@
 package main
 
 import (
-	"localformat/internal/cli"
+	"github.com/leadfact/format-fast/internal/cli"
 	"os"
 )
 

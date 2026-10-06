@@ -12,14 +12,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"localformat/formatter"
+	"github.com/leadfact/format-fast/formatter"
 )
 
-const Version = "0.2.0"
+// Version is overridden by release builds via -ldflags -X.
+var Version = "0.3.0-dev"
 
 // Run makes CLI behavior testable without replacing process-wide stdin/stdout.
 func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	f := flag.NewFlagSet("localformat", flag.ContinueOnError)
+	f := flag.NewFlagSet("formatfast", flag.ContinueOnError)
 	f.SetOutput(stderr)
 	textInput := f.String("text", "", "format inline JSON text explicitly")
 	fileInput := f.String("file", "", "read a file explicitly (- for stdin)")
@@ -36,12 +37,12 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	maxDepth := f.Int("max-depth", 512, "maximum nesting depth (1..4096)")
 	version := f.Bool("version", false, "print version")
 	f.Usage = func() {
-		fmt.Fprint(stderr, "Usage: localformat [flags] [JSON|file|-]\n\nFormats JSON/NDJSON locally. No network, dependencies or telemetry.\nFlags may appear before or after the input. Use -- before a dash-prefixed filename.\nQuote inline JSON with shell single quotes. No input argument reads stdin.\n\nExamples:\n  localformat '{\"message\":\"hello\\nworld\"}'\n  localformat '{\"message\":\"hello\\nworld\"}' --extract message\n  localformat log.json\n  localformat --text '{\"x\":1}'\n  localformat --file log.json\n  cat log.json | localformat\n  tail -f app.jsonl | localformat --stream --extract message\n")
+		fmt.Fprint(stderr, "Usage: formatfast [flags] [JSON|file|-]\n\nFormats JSON/NDJSON locally. No network, dependencies or telemetry.\nFlags may appear before or after the input. Use -- before a dash-prefixed filename.\nQuote inline JSON with shell single quotes. No input argument reads stdin.\n\nExamples:\n  formatfast '{\"message\":\"hello\\nworld\"}'\n  formatfast '{\"message\":\"hello\\nworld\"}' --extract message\n  formatfast log.json\n  formatfast --text '{\"x\":1}'\n  formatfast --file log.json\n  cat log.json | formatfast\n  tail -f app.jsonl | formatfast --stream --extract message\n")
 		f.PrintDefaults()
 	}
 	ordered, err := orderArgs(f, args)
 	if err != nil {
-		fmt.Fprintln(stderr, "localformat:", err)
+		fmt.Fprintln(stderr, "formatfast:", err)
 		return 2
 	}
 	if err := f.Parse(ordered); err != nil {
@@ -51,10 +52,10 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if *version {
-		fmt.Fprintln(stdout, "localformat", Version)
+		fmt.Fprintln(stdout, "formatfast", Version)
 		return 0
 	}
-	errOut := func(err error) int { fmt.Fprintln(stderr, "localformat:", err); return 1 }
+	errOut := func(err error) int { fmt.Fprintln(stderr, "formatfast:", err); return 1 }
 	if *maxBytes < 1 || *maxBytes > 1<<30 {
 		return errOut(errors.New("max-bytes must be between 1 and 1073741824"))
 	}
@@ -102,7 +103,7 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	var temp *os.File
 	if *output != "" {
 		var err error
-		temp, err = os.CreateTemp(filepath.Dir(*output), ".localformat-*")
+		temp, err = os.CreateTemp(filepath.Dir(*output), ".formatfast-*")
 		if err != nil {
 			return errOut(err)
 		}

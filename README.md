@@ -1,4 +1,4 @@
-# localformat
+# formatfast
 
 Локальный CLI на Go для форматирования JSON/JSONL и чтения многострочных логов.
 Без сторонних зависимостей, сети, браузера, сервера и телеметрии.
@@ -10,18 +10,20 @@
 
 ## Быстрый старт
 
-В `bin/localformat` — готовый бинарник для macOS Apple Silicon. Из каталога проекта:
+Команда называется `formatfast`, GitHub-репозиторий — `leadfact/format-fast`.
+Собрать локальный бинарник и запустить из каталога проекта:
 
 ```sh
-./bin/localformat '{"log.level":"debug","message":"hello\nworld"}'
-./bin/localformat /path/to/log.json
-./bin/localformat -extract message /path/to/log.json
+make build
+./bin/formatfast '{"log.level":"debug","message":"hello\nworld"}'
+./bin/formatfast /path/to/log.json
+./bin/formatfast -extract message /path/to/log.json
 ```
 
 Сборка для своей системы (Go 1.23+):
 
 ```sh
-go build -trimpath -o bin/localformat ./cmd/localformat
+go build -trimpath -o bin/formatfast ./cmd/formatfast
 go test ./...
 ```
 
@@ -32,16 +34,36 @@ go test ./...
 export PATH="$PWD/bin:$PATH"
 ```
 
+## Установка через Homebrew
+
+После публикации текущих изменений в GitHub можно установить версию из `main`:
+
+```sh
+brew tap leadfact/format-fast https://github.com/leadfact/format-fast.git
+brew install --HEAD leadfact/format-fast/formatfast
+```
+
+После первого стабильного релиза и обновления формулы флаг `--HEAD` не нужен:
+
+```sh
+brew install leadfact/format-fast/formatfast
+formatfast '{"message":"hello\nworld"}' --extract message
+```
+
+Подготовка релиза, обновление формулы и команды для пользователя описаны в
+[docs/HOMEBREW.md](docs/HOMEBREW.md). Формула стабильной версии устанавливает готовый
+бинарник без Go; начальная HEAD-формула собирает исходники с помощью Go.
+
 ## Использование
 
 Три способа ввода: текст одним аргументом, файл, stdin. Флаги могут стоять **до или
 после ввода**. Поддерживаются `-flag` и `--flag`.
 
 ```sh
-localformat '{"log.level":"debug","message":"hello\nworld"}'
-localformat log.json
-cat log.json | localformat
-tail -f app.jsonl | localformat --stream
+formatfast '{"log.level":"debug","message":"hello\nworld"}'
+formatfast log.json
+cat log.json | formatfast
+tail -f app.jsonl | formatfast --stream
 ```
 
 Аргумент, похожий на JSON (объект, массив, строка, число, `true`, `false`, `null`),
@@ -59,45 +81,45 @@ JSON следует заключать в одинарные shell-кавычк�
 
 ```sh
 # Форматировать JSON; по умолчанию 2 пробела.
-cat /path/to/log.json | localformat
-localformat -indent 4 /path/to/log.json
+cat /path/to/log.json | formatfast
+formatfast -indent 4 /path/to/log.json
 
 # Аналог кнопки раскрытия message на сайте.
-localformat -extract message /path/to/log.json
-localformat '{"message":"HEADERS:\n\tAccept: application/json"}' --extract message
+formatfast -extract message /path/to/log.json
+formatfast '{"message":"HEADERS:\n\tAccept: application/json"}' --extract message
 
 # Явно выбрать текст или файл, когда автоматическое определение не подходит.
-localformat --text '{"x":1}'
-localformat --file /path/to/log.json
+formatfast --text '{"x":1}'
+formatfast --file /path/to/log.json
 
 # JSON Pointer: вложенное поле, массив, ключ с точкой.
-localformat -extract /events/0/message /path/to/log.json
-localformat -extract log.level /path/to/log.json
+formatfast -extract /events/0/message /path/to/log.json
+formatfast -extract log.level /path/to/log.json
 
 # Строка с JSON внутри: извлечь и отформатировать вторым вызовом.
-localformat -extract payload /path/to/log.json | localformat
+formatfast -extract payload /path/to/log.json | formatfast
 
 # Оставить извлечённую строку в JSON-кавычках.
-localformat -extract message -json /path/to/log.json
+formatfast -extract message -json /path/to/log.json
 
 # Снять ровно один слой экранирования отдельной JSON-строки.
-localformat '"HEADERS:\n\tAccept: application/json"' --unescape
+formatfast '"HEADERS:\n\tAccept: application/json"' --unescape
 
 # Компактный JSON без потери токенов. Для JSONL использовать оба флага.
-localformat -compact /path/to/log.json
-localformat -stream -compact /path/to/app.jsonl
+formatfast -compact /path/to/log.json
+formatfast -stream -compact /path/to/app.jsonl
 
 # Непрерывный поток JSONL: результат выдаётся после каждой строки.
-tail -f /path/to/app.jsonl | localformat -stream -extract message
+tail -f /path/to/app.jsonl | formatfast -stream -extract message
 
 # Подсветка в терминале: auto / always / never.
-localformat -color always /path/to/log.json | less -R
+formatfast -color always /path/to/log.json | less -R
 
 # Запись через временный файл и атомарную замену результата.
-localformat -output /path/to/pretty.json /path/to/log.json
+formatfast -output /path/to/pretty.json /path/to/log.json
 
 # Ограниченный JSON-like режим; нестандартная запись сохраняется.
-localformat "{level:'debug', amount:1.2300,}" --loose
+formatfast "{level:'debug', amount:1.2300,}" --loose
 ```
 
 Обычный режим принимает один JSON или несколько документов, разделённых пробельными
@@ -154,7 +176,7 @@ JSON Pointer: `/events/0/message`. В сегменте указателя `~1` �
 ## Архитектура и подключение интерфейса
 
 ```text
-cmd/localformat/main.go       точка входа
+cmd/formatfast/main.go       точка входа
 internal/cli/cli.go           аргументы, stdin/файлы, поток, атомарная запись
 internal/cli/input.go         выбор текста/файла/stdin, порядок флагов
 formatter/formatter.go       публичный API и типы
