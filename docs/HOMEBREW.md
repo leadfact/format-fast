@@ -1,80 +1,97 @@
 # Homebrew и релизы formatfast
 
-Репозиторий: `leadfact/format-fast`. Имя исполняемого файла и формулы: `formatfast`.
-Сам репозиторий используется как tap: отдельный `homebrew-*` репозиторий не требуется.
-Поскольку название GitHub-репозитория не начинается с `homebrew-`, при первом `tap`
-необходимо явно передать URL.
+Два независимых Git-репозитория:
+
+- `leadfact/format-fast` — исходники, тесты, сборка и GitHub Releases.
+- `leadfact/homebrew-format-fast` — `Formula/formatfast.rb` и инструкция установки.
+
+Локальная структура:
+
+```text
+/Users/dnarek/study/golang/formatfast/
+├── format-fast/
+└── homebrew-format-fast/
+```
+
+Общий каталог не является отдельным репозиторием. У каждого проекта свой `.git`.
+Имя исполняемого файла и формулы — `formatfast`.
 
 ## До первого стабильного релиза
 
-После публикации текущих изменений в `main`:
-
 ```sh
-brew tap leadfact/format-fast https://github.com/leadfact/format-fast.git
 brew install --HEAD leadfact/format-fast/formatfast
 formatfast '{"message":"hello\nworld"}' --extract message
 ```
 
-Начальная `Formula/formatfast.rb` собирает код из `main`. Homebrew сам устанавливает
-Go как build-зависимость. Это работоспособный вариант без релизных архивов и без
-выдуманных ссылок/контрольных сумм на ещё не опубликованные файлы.
-
-Для обновления установки из `main`:
+Homebrew автоматически подключит `leadfact/homebrew-format-fast`.
+Начальная формула в tap собирает код из `main`; Homebrew устанавливает Go
+как зависимость сборки. Для обновления:
 
 ```sh
 brew update
 brew upgrade --fetch-HEAD leadfact/format-fast/formatfast
 ```
 
-## Стабильные релизы с готовыми бинарниками
-
-Настроен workflow `.github/workflows/release.yml`. Отправка тега `vX.Y.Z` запускает:
-
-1. Тесты с race detector.
-2. Сборку `CGO_ENABLED=0` для macOS arm64/amd64 и Linux arm64/amd64.
-3. Упаковку архивов `formatfast_X.Y.Z_OS_ARCH.tar.gz`.
-4. Создание `checksums.txt` и `formatfast.rb` с SHA-256 этих же архивов.
-5. Проверку Linux-бинарника и синтаксиса формулы.
-6. Создание **черновика GitHub Release** с перечисленными файлами.
-
-Для релиза `0.3.0` после коммита и отправки изменений в `main`:
+Если раньше tap был подключён к `leadfact/format-fast` через явный URL,
+переключи его remote:
 
 ```sh
+brew tap --custom-remote leadfact/format-fast https://github.com/leadfact/homebrew-format-fast.git
+brew update
+```
+
+## Стабильный релиз
+
+Workflow `.github/workflows/release.yml` основного проекта запускается при отправке
+тега `vX.Y.Z`. Он выполняет тесты с race detector, собирает бинарники для macOS/Linux
+на arm64/amd64, создаёт архивы, `checksums.txt` и `formatfast.rb`, проверяет
+Linux-бинарник и синтаксис формулы, затем создаёт **черновик GitHub Release**.
+
+Например, после коммита и отправки исходников в `main`:
+
+```sh
+cd /Users/dnarek/study/golang/formatfast/format-fast
 git tag v0.3.0
 git push origin v0.3.0
 ```
 
-Открой GitHub → Releases, проверь черновик и опубликуй его. Затем скачай формулу
-**именно из опубликованного релиза** и замени начальную формулу в основной ветке:
+Дождись успешного workflow, открой GitHub → Releases, проверь черновик и нажми
+Publish release, оставив Set as a pre-release выключенным.
+
+Теперь обнови формулу **в tap**, используя файл из опубликованного релиза:
 
 ```sh
-gh release download v0.3.0 --repo leadfact/format-fast \
-  --pattern formatfast.rb --dir Formula --clobber
+cd /Users/dnarek/study/golang/formatfast/homebrew-format-fast
+curl --fail --location --output Formula/formatfast.rb \
+  https://github.com/leadfact/format-fast/releases/download/v0.3.0/formatfast.rb
+ruby -c Formula/formatfast.rb
+git diff -- Formula/formatfast.rb
+git add Formula/formatfast.rb
+git commit -m "Update formatfast to 0.3.0"
+git push origin main
 ```
 
-Проверь diff `Formula/formatfast.rb`, закоммить и отправь этот файл в `main`.
-Workflow не коммитит в основную ветку автоматически. Повторяй этот шаг для каждой
-новой стабильной версии, чтобы `brew upgrade` видел свежие URL и контрольные суммы.
-Не копируй локальную формулу, если архивы релиза были заново собраны на CI: хеши
-должны соответствовать **реально опубликованным** архивам.
+Для следующей версии замени `0.3.0` во всех командах на её номер.
+Workflow не коммитит и не отправляет изменения в tap автоматически.
+Не используй локальную формулу с архивами, пересобранными в CI: контрольные суммы
+должны соответствовать реально опубликованным файлам.
 
-Теперь пользователю нужны команды:
+После обновления tap пользователю достаточно:
 
 ```sh
-brew tap leadfact/format-fast https://github.com/leadfact/format-fast.git
 brew install leadfact/format-fast/formatfast
 formatfast --version
 ```
 
-Go при установке стабильной бинарной версии не нужен. Формула выберет нужный архив
-по ОС и архитектуре и проверит SHA-256. Для обновления:
+Стабильная формула выбирает готовый бинарник по ОС и архитектуре, проверяет SHA-256;
+Go для установки не нужен. Последующие обновления:
 
 ```sh
 brew update
 brew upgrade leadfact/format-fast/formatfast
 ```
 
-Если раньше устанавливалась HEAD-версия, после появления стабильной формулы:
+Если уже установлена HEAD-версия, для перехода на стабильную:
 
 ```sh
 brew update
@@ -82,27 +99,23 @@ brew uninstall leadfact/format-fast/formatfast
 brew install leadfact/format-fast/formatfast
 ```
 
-## Локальная проверка релиза
+## Локальная проверка сборки релиза
+
+Из каталога `format-fast`:
 
 ```sh
 make test
 make release VERSION=0.3.0
-ruby -c Formula/formatfast.rb
 ruby -c dist/formatfast.rb
+ruby -c ../homebrew-format-fast/Formula/formatfast.rb
 ```
 
-Команда `make release` создаёт только локальные файлы в игнорируемом `dist/`;
-она не создаёт теги, коммиты и GitHub Releases. Версия записывается в каждый бинарник
-через Go linker `-X`. Архивы содержат только исполняемый файл, без логов и `.env`.
+`make release` создаёт только локальные файлы в игнорируемом `dist/`.
+Команда не создаёт теги, коммиты и GitHub Releases. Версия встраивается через linker
+`-X`. Архивы содержат только бинарник, без логов и `.env`.
 
-В Actions используется стандартный `GITHUB_TOKEN` с `contents: write` для создания
-черновика в этом же репозитории. Отдельный токен другого репозитория не требуется.
-Для общедоступной установки репозиторий и релизные файлы должны быть публичными;
-для приватного репозитория потребуется доступ GitHub у устанавливающего пользователя.
+Для создания черновика workflow использует стандартный `GITHUB_TOKEN` с
+`contents: write`. Для общедоступной установки оба репозитория и релизные файлы
+должны быть публичными.
 
-Существующие файлы Homebrew подготовлены локально; пока изменения и релиз не
-опубликованы, команды установки из GitHub не доставят эту новую версию.
-
-Документация Homebrew:
-- https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap
-- https://docs.brew.sh/Formula-Cookbook
+Документация: https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap
