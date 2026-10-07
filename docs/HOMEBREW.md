@@ -16,20 +16,21 @@
 Общий каталог не является отдельным репозиторием. У каждого проекта свой `.git`.
 Имя исполняемого файла и формулы — `formatfast`.
 
-## До первого стабильного релиза
+## Установка стабильной версии
 
 ```sh
-brew install --HEAD leadfact/format-fast/formatfast
+brew install leadfact/format-fast/formatfast
+formatfast --version
 formatfast '{"message":"hello\nworld"}' --extract message
 ```
 
-Homebrew автоматически подключит `leadfact/homebrew-format-fast`.
-Начальная формула в tap собирает код из `main`; Homebrew устанавливает Go
-как зависимость сборки. Для обновления:
+Homebrew автоматически подключит `leadfact/homebrew-format-fast` и установит
+готовый бинарник опубликованного релиза. Флаг `--HEAD` не требуется.
+Для обновления:
 
 ```sh
 brew update
-brew upgrade --fetch-HEAD leadfact/format-fast/formatfast
+brew upgrade leadfact/format-fast/formatfast
 ```
 
 Если раньше tap был подключён к `leadfact/format-fast` через явный URL,

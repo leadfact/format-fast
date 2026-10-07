@@ -39,22 +39,17 @@ export PATH="$PWD/bin:$PATH"
 Формула живёт в отдельном репозитории
 [leadfact/homebrew-format-fast](https://github.com/leadfact/homebrew-format-fast).
 Homebrew подключает его автоматически при установке; отдельный `brew tap` не нужен.
-Пока стабильный релиз не опубликован, установка из `main`:
-
-```sh
-brew install --HEAD leadfact/format-fast/formatfast
-formatfast '{"message":"hello\nworld"}' --extract message
-```
-
-После первого стабильного релиза и обновления формулы флаг `--HEAD` не нужен:
+Установка стабильного релиза:
 
 ```sh
 brew install leadfact/format-fast/formatfast
+formatfast --version
+formatfast '{"message":"hello\nworld"}' --extract message
 ```
 
 Подготовка релиза, обновление формулы и переход со старого tap описаны в
-[docs/HOMEBREW.md](docs/HOMEBREW.md). Стабильная формула устанавливает готовый
-бинарник без Go; начальная HEAD-формула собирает исходники с помощью Go.
+[docs/HOMEBREW.md](docs/HOMEBREW.md). Формула устанавливает готовый бинарник
+для macOS/Linux на arm64/amd64 с проверкой SHA-256; Go для установки не нужен.
 
 ## Использование
 
